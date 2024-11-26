@@ -1,138 +1,8 @@
 import fs from 'fs';
+import { DISCORD_MESSAGE, HAR_ENTRY } from './types/DiscordTypes';
+import { ITEM_LISTING, ITEM_SALE, RARITY, ITEM_NAMES } from './types/DungoTypes';
 
-interface DISCORD_MESSAGE {
-    type: string,
-    content: string,
-    mentions: any[],
-    mention_roles: any[],
-    attachments: any[],
-    embeds: [
-        {
-            type: string,
-            title: string,
-            description: string,
-            color: number,
-            content_scan_version: number
-        }
-    ],
-    timestamp: string,
-    edited_timestamp: string,
-    flags: string,
-    components: any[],
-    id: string,
-    channel_id: string,
-    author: {
-        id: string,
-        username: string,
-        avatar: string,
-        discriminator: string,
-        public_flags: number,
-        flags: number,
-        bot: true,
-        banner: any,
-        accent_color: any,
-        global_name: any,
-        avatar_decoration_data: any,
-        banner_color: any,
-        clan: any,
-        primary_guild: any
-    },
-    pinned: boolean,
-    mention_everyone: boolean,
-    tts: boolean
-}
-
-interface HAR_ENTRY {
-    request: {
-        method: string;
-        url: string;
-        headers: Record<string, string>;
-        bodySize: number;
-        cookies: string[];
-        postData?: {
-            text: string;
-        };
-    };
-    response: {
-        status: number;
-        statusText: string;
-        headers: Record<string, string>;
-        content: {
-            size: number;
-            mimeType: string;
-            text: string;
-        };
-    };
-}
-
-enum RARITY {
-    Common = 'common',
-    Uncommon = 'uncommon',
-    Rare = 'rare',
-    Epic = 'epic',
-    Legendary = 'legendary'
-}
-
-enum ITEM_NAMES {
-    bf_cannon = "BF Cannon",
-    berserkers_armor = "Berserkers Armor",
-    chumby_chicken = "Chumby Chicken",
-    cleansing_flames = "Cleansing Flames",
-    curseof_exhaustion = "Curse of Exhaustion",
-    dark_ritual = "Dark Ritual",
-    draining_dagger = "Draining Dagger",
-    fiery_thorns = "Fiery Thorns",
-    fire_sword = "Fire Sword",
-    halberd = "Halberd",
-    healing_pendant = "Healing Pendant",
-    love_letter = "Love Letter",
-    magic_parasol = "Magic Parasol",
-    martyr_armor = "Martyr Armor",
-    mocking_armor = "Mocking Armor",
-    muddy_shell = "Muddy Shell",
-    pet_imp = "Pet Imp",
-    poison_dagger = "Poison Dagger",
-    riot_shield = "Riot Shield",
-    rock_companion = "Rock Companion",
-    sacrificial_tome = "Sacrificial Tome",
-    seeking_missiles = "Seeking Missiles",
-    special_delivery = "Special Delivery",
-    survival_kit = "Survival Kit",
-    whirlwind_axeicon = "Whirlwind Axe icon",
-    witchs_armor = "Witchs Armor",
-    big_club = "Big Club",
-    boosting_bugle = "Boosting Bugle",
-    challenger_arrow = "Challenger Arrow",
-    energetic_ally = "Energetic Ally",
-    explosion_powder = "Explosion Powder",
-    festive_feast = "Festive Feast",
-    freezing_popsicle = "Freezing Popsicle",
-    knights_lance = "Knights Lance",
-    pogable_forge = "POGable Forge",
-    plague_bringer = "Plague Bringer",
-    punching_bag = "Punching Bag",
-    red_cape = "Red Cape",
-    the_box = "The BOX",
-}
-
-type ITEM_LISTING = {
-    id: string;
-    timestamp: Date;
-    rarity: RARITY | null;
-    name: string;
-    tier: number;
-    price: number;
-}
-
-type ITEM_SALE = {
-    id: string;
-    timestamp: string;
-    rarity: RARITY | null;
-    name: string;
-    tier: number;
-    price: number;
-}
-
+// Rest of your code...
 async function read_har_file(file_path: string) {
     const file_data = fs.readFileSync(file_path, 'utf8');
     return JSON.parse(file_data);
@@ -159,7 +29,7 @@ async function parse_har_entries() {
     return messages;
 }
 
-function parse_entry_descriptions(har_entry: HAR_ENTRY): { sellings: ITEM_SALE[], listings: ITEM_LISTING[] } {
+function parse_entry_descriptions(har_entry: HAR_ENTRY): { sales: ITEM_SALE[], listings: ITEM_LISTING[] } {
     const har_entry_messages: DISCORD_MESSAGE[] = JSON.parse(har_entry.response.content.text);
     const item_sales: ITEM_SALE[] = [];
     const item_listings: ITEM_LISTING[] = [];
@@ -172,7 +42,7 @@ function parse_entry_descriptions(har_entry: HAR_ENTRY): { sellings: ITEM_SALE[]
             }
         }
     }
-    return { sellings: item_sales, listings: item_listings };
+    return { sales: item_sales, listings: item_listings };
 }
 
 function parse_sale_description(description: string, message: DISCORD_MESSAGE): ITEM_SALE {
@@ -222,11 +92,10 @@ async function main() {
     let all_sales: ITEM_SALE[] = [];
     let all_listings: ITEM_LISTING[] = [];
     for (const har_entry of har_entries) {
-        const { sellings: entry_sales, listings: entry_listings } = parse_entry_descriptions(har_entry);
-        all_sales.push(...entry_sales);
-        all_listings.push(...entry_listings);
+        const { sales, listings } = parse_entry_descriptions(har_entry);
+        all_sales.push(...sales);
+        all_listings.push(...listings);
     }
-    // console.log(all_listings);
     console.log(all_sales);
 }
 
