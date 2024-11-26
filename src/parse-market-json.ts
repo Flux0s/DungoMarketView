@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-interface DISCORD_MESSAGE_FORMAT {
+interface DISCORD_MESSAGE {
     type: string,
     content: string,
     mentions: any[],
@@ -117,20 +117,20 @@ enum ITEM_NAMES {
 
 type ITEM_LISTING = {
     id: string;
-    timestamp: string;
+    timestamp: Date;
     rarity: RARITY | null;
     name: string;
     tier: number;
-    // price: number;
+    price: number;
 }
 
-type ITEM_SELLING = {
+type ITEM_SALE = {
     id: string;
     timestamp: string;
     rarity: RARITY | null;
     name: string;
     tier: number;
-    // price: number;
+    price: number;
 }
 
 async function read_har_file(file_path: string) {
@@ -159,37 +159,44 @@ async function parse_har_entries() {
     return messages;
 }
 
-function parse_entry_descriptions(har_entry: HAR_ENTRY): { sellings: ITEM_SELLING[], listings: ITEM_LISTING[] } {
-    const har_entry_messages: DISCORD_MESSAGE_FORMAT[] = JSON.parse(har_entry.response.content.text);
-    const item_sellings: ITEM_SELLING[] = [];
+function parse_entry_descriptions(har_entry: HAR_ENTRY): { sellings: ITEM_SALE[], listings: ITEM_LISTING[] } {
+    const har_entry_messages: DISCORD_MESSAGE[] = JSON.parse(har_entry.response.content.text);
+    const item_sales: ITEM_SALE[] = [];
     const item_listings: ITEM_LISTING[] = [];
     for (const message of har_entry_messages) {
         for (const embed of message.embeds) {
-            const rarity = parse_rarity(embed.description);
-            const description_parts = embed.description.split(' ');
-            let item_name: string | null = null;
-            let item_tier: number | null = null;
-            for (let i = 1; i < description_parts.length; i++) {
-                const num_match = description_parts[i].match(/^\d+$/);
-                if (num_match) {
-                    item_tier = parseInt(num_match[0], 10);
-                    break;
-                } else {
-                    item_name = description_parts[i];
-                }
-            }
-            console.log()
-            if (item_name && item_tier !== null) {
-                if (embed?.title?.toLowerCase().includes("sold")) {
-                    item_sellings.push({ id: message.id, timestamp: message.timestamp, rarity: rarity, name: item_name, tier: item_tier });
-                } else if (embed?.title?.toLowerCase().includes("listing")) {
-                    item_listings.push({ id: message.id, timestamp: message.timestamp, rarity: rarity, name: item_name, tier: item_tier });
-                }
+            if (embed?.title?.toLowerCase().includes("sold")) {
+                item_sales.push(parse_sale_description(embed.description, message));
+            } else if (embed?.title?.toLowerCase().includes("listing")) {
+                parse_listing_description(embed.description);
             }
         }
     }
-    return { sellings: item_sellings, listings: item_listings };
+    return { sellings: item_sales, listings: item_listings };
 }
+
+function parse_sale_description(description: string, message: DISCORD_MESSAGE): ITEM_SALE {
+    const rarity = parse_rarity(description);
+    const nameMatch = description.match(/\b[A-Za-z\s]+\b/);
+    const tierMatch = description.match(/(?:tier|level)\s*(\d+)/i);
+    const priceMatch = description.match(/(\d+)\s*coins/i);
+
+    if (!rarity || !nameMatch || !tierMatch || !priceMatch) {
+        throw new Error("Invalid sale description format");
+    }
+
+    const name = ITEM_NAMES[nameMatch[0].replace(/\s+/g, '_') as keyof typeof ITEM_NAMES];
+    const tier = parseInt(tierMatch[1], 10);
+    const price = parseInt(priceMatch[1], 10);
+
+    return { id: message.id, timestamp: message.timestamp, rarity: rarity, name: name, tier: tier, price: price };
+}
+
+function parse_listing_description(description: string) {
+    // listing description is of the format: "<item_rarity> <item_name> <item_tier> has just been listed in the marketplace for <item_price> coins!"
+    console.log(description);
+}
+
 
 function parse_rarity(description: string): RARITY | null {
     const emojiMatch = description.match(/⚪|🟢|🔵|🟣|🟠/);
@@ -212,15 +219,15 @@ function parse_rarity(description: string): RARITY | null {
 
 async function main() {
     const har_entries = await parse_har_entries();
-    let allSellings: ITEM_SELLING[] = [];
-    let allListings: ITEM_LISTING[] = [];
+    let all_sales: ITEM_SALE[] = [];
+    let all_listings: ITEM_LISTING[] = [];
     for (const har_entry of har_entries) {
-        const { sellings, listings } = parse_entry_descriptions(har_entry);
-        allSellings.push(...sellings);
-        allListings.push(...listings);
+        const { sellings: entry_sales, listings: entry_listings } = parse_entry_descriptions(har_entry);
+        all_sales.push(...entry_sales);
+        all_listings.push(...entry_listings);
     }
-    console.log(allListings);
-    console.log(allSellings);
+    // console.log(all_listings);
+    console.log(all_sales);
 }
 
 main();
