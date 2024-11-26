@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-interface discordMessageFormat {
+interface DISCORD_MESSAGE_FORMAT {
     type: string,
     content: string,
     mentions: any[],
@@ -42,7 +42,7 @@ interface discordMessageFormat {
     tts: boolean
 }
 
-interface har_entry {
+interface HAR_ENTRY {
     request: {
         method: string;
         url: string;
@@ -65,6 +65,32 @@ interface har_entry {
     };
 }
 
+enum RARITY {
+    Common = 'common',
+    Uncommon = 'uncommon',
+    Rare = 'rare',
+    Epic = 'epic',
+    Legendary = 'legendary'
+}
+
+type ITEM_LISTING = {
+    id: string;
+    timestamp: string;
+    rarity: RARITY | null;
+    name: string;
+    tier: number;
+    // price: number;
+}
+
+type ITEM_SELLING = {
+    id: string;
+    timestamp: string;
+    rarity: RARITY| null;
+    name: string;
+    tier: number;
+    // price: number;
+}
+
 async function readHarFile(filePath: string) {
     const fileData = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(fileData);
@@ -79,7 +105,7 @@ async function fetchDiscordMessages() {
 }
 
 async function displayMessages() {
-    const messages: har_entry[] = [];
+    const messages: HAR_ENTRY[] = [];
     const harData = await fetchDiscordMessages();
     if (harData && harData.log && harData.log.entries) {
         for (const entry of harData.log.entries) {
@@ -91,41 +117,67 @@ async function displayMessages() {
     return messages;
 }
 
-function parseMessageDescription(har_entry: har_entry): void {
-    const har_entry_messages: discordMessageFormat[] = JSON.parse(har_entry.response.content.text);
+function parseMessageDescription(har_entry: HAR_ENTRY): { sellings: ITEM_SELLING[], listings: ITEM_LISTING[] } {
+    const har_entry_messages: DISCORD_MESSAGE_FORMAT[] = JSON.parse(har_entry.response.content.text);
+    const item_sellings: ITEM_SELLING[] = [];
+    const item_listings: ITEM_LISTING[] = [];
     for (const message of har_entry_messages) {
         for (const embed of message.embeds) {
-            if (embed.title && embed.title.toLowerCase().includes("sold")) {
-                const emojiMatch = embed.description?.match(/⚪|🟢|🔵|🟣/);
-                if (emojiMatch) {
-                    const emoji = emojiMatch[0];
-                    let itemName: string | null = null;
-                    let price: number | null = null;
-                    const descriptionParts = embed.description.split(' ');
-                    for (let i = 1; i < descriptionParts.length; i++) {
-                        const numMatch = descriptionParts[i].match(/^\d+$/);
-                        if (numMatch) {
-                            price = parseInt(numMatch[0], 10);
-                            break;
-                        } else {
-                            itemName = descriptionParts[i];
-                        }
-                    }
-                    if (itemName && price !== null) {
-                        console.log(`Id: ${message.id}`);
-                        console.log(`Timestamp: ${message.timestamp}`);
-                        console.log(`${emoji} ${itemName} has just been sold for ${price} coins!`);
-                    }
+            const emojiMatch = embed.description?.match(/⚪|🟢|🔵|🟣|🟠/);
+            let rarity: RARITY | null = null;
+            if (emojiMatch) {
+                switch (emojiMatch[0]) {
+                    case '⚪':
+                        rarity = RARITY.Common;
+                        break;
+                    case '🟢':
+                        rarity = RARITY.Uncommon;
+                        break;
+                    case '🔵':
+                        rarity = RARITY.Rare;
+                        break;
+                    case '🟣':
+                        rarity = RARITY.Epic;
+                        break;
+                    case '🟠':
+                        rarity = RARITY.Legendary;
+                        break;
                 }
+            }
+            let item_name: string | null = null;
+            let item_tier: number | null = null;
+            let item_price: number | null = null;
+            const descriptionParts = embed.description.split(' ');
+            for (let i = 1; i < descriptionParts.length; i++) {
+                const numMatch = descriptionParts[i].match(/^\d+$/);
+                if (numMatch) {
+                    item_tier = parseInt(numMatch[0], 10);
+                    break;
+                } else {
+                    item_name = descriptionParts[i];
+                }
+            }
+            // console.log(embed.description)
+            if (item_name && item_tier !== null) {
+                if (embed?.title?.toLowerCase().includes("sold")) {
+                    item_sellings.push({ id: message.id, timestamp: message.timestamp, rarity: rarity, name: item_name, tier: item_tier });
+                } else if (embed?.title?.toLowerCase().includes("listing"))
+                    item_listings.push({ id: message.id, timestamp: message.timestamp, rarity: rarity, name: item_name, tier: item_tier });
             }
         }
     }
+    return { sellings: item_sellings, listings: item_listings };
 }
 
 async function main() {
     const har_entries = await displayMessages();
     for (const har_entry of har_entries) {
-        parseMessageDescription(har_entry);
+        let sellings: ITEM_SELLING[] = [];
+        let listings: ITEM_LISTING[] = [];
+        ({ sellings, listings } = parseMessageDescription(har_entry));
+        console.log('Sellings:', sellings);
+        console.log('Listings:', listings);
     }
 }
+
 main();
