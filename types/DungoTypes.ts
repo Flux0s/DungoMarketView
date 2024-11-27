@@ -4,6 +4,7 @@ export enum RARITY {
   Rare = "rare",
   Epic = "epic",
   Legendary = "legendary",
+  Unknown = "Unknown",
 }
 
 export enum ITEM_NAMES {

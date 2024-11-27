@@ -42,7 +42,7 @@ function parse_rarity_from_emoji(rarity_emoji: string): RARITY | null {
     case "🟠":
       return RARITY.Legendary;
   }
-  return null;
+  return RARITY.Unknown;
 }
 function parse_sale_description(description: string): {
   rarity: RARITY | null;
@@ -57,10 +57,10 @@ function parse_sale_description(description: string): {
     throw new Error("Input string does not match expected format.");
   }
   return {
-    rarity: parse_rarity_from_emoji(match[1]),
-    name: match[2],
-    tier: parseInt(match[3], 10),
-    price: parseInt(match[4], 10),
+    rarity: parse_rarity_from_emoji(match[1] || "Unknown"),
+    name: match[2] || "Unknown Item",
+    tier: parseInt(match[3] || "-1", 10),
+    price: parseInt(match[4] || "-1", 10),
   };
 }
 
@@ -78,10 +78,10 @@ function parse_listing_description(description: string): {
     throw new Error("Input string does not match expected format.");
   }
   return {
-    rarity: parse_rarity_from_emoji(match[1]),
-    name: match[2],
-    tier: parseInt(match[3], 10),
-    price: parseInt(match[4], 10),
+    rarity: parse_rarity_from_emoji(match[1] || "Unknown"),
+    name: match[2] || "Unknown Item",
+    tier: parseInt(match[3] || "-1", 10),
+    price: parseInt(match[4] || "-1", 10),
   };
 }
 
