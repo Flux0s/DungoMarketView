@@ -49,7 +49,10 @@ This project aims to create a platform for maintaining, and monitoring market da
 
 ### Key Features
 
-- Parsing of market channel messages into usable listing data objects
+- None yet - stay tuned for updates
+
+### Usage
+- Upload a `.har` file containing the market data exported from the BoxBox Dungeon Server's `market-listings` channel.
 
 ### Future Development Roadmap
 
