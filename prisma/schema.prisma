@@ -80,7 +80,7 @@ model DiscordMessage {
     mentions        Json[] // Use Json[] as we don't have a specific type for mentions in TypeScript
     mentionRoles    Json[]
     attachments     Json[]
-    embeds          Json[]
+    embeds          Embed[]
     timestamp       DateTime
     editedTimestamp DateTime
     flags           String
@@ -101,4 +101,15 @@ model Author {
     flags          Int
     bot            Boolean
     DiscordMessage DiscordMessage[]
+}
+
+model Embed {
+    id                 String          @id @default(cuid())
+    type               String
+    title              String
+    description        String
+    color              Int
+    contentScanVersion String
+    DiscordMessage     DiscordMessage? @relation(fields: [discordMessageId], references: [id])
+    discordMessageId   Int?
 }
