@@ -1,15 +1,18 @@
 "use client";
 import React, { useRef } from "react";
-import { Upload } from "lucide-react";
+import UploadParser from "~/app/_services/upload-parser";
 
+import { Upload } from "lucide-react";
 import { Button } from "~/app/_components/button";
 
 export default function ButtonIcon() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleChange = (event: React.ChangeEvent) => {
-    
-    console.log(event.target.files);
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) return;
+    UploadParser.parseUpload(event.target.files).catch((error) => {
+      console.error("Error parsing upload:", error);
+    });
   };
   return (
     <div>
