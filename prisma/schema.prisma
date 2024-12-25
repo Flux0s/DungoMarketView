@@ -83,14 +83,9 @@ model DiscordMessage {
   id              Int      @id @default(autoincrement())
   type            String
   content         String
-  mentions        Json[]
-  mentionRoles    Json[]
-  attachments     Json[]
   embeds          Embed[]
   timestamp       DateTime
   editedTimestamp DateTime
-  flags           String
-  components      Json[]
   channelId       String
   author          Author   @relation(fields: [authorId], references: [id])
   authorId        String
@@ -103,10 +98,7 @@ model DiscordMessage {
 model Author {
   id             String           @id @default(cuid())
   username       String?
-  avatar         String?
   discriminator  String?
-  publicFlags    Int
-  flags          Int
   bot            Boolean
   DiscordMessage DiscordMessage[]
 }
