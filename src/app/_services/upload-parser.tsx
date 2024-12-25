@@ -3,16 +3,17 @@
 import { Har } from "har-format";
 
 export default class UploadParser {
-  static parseUpload(files: FileList): Promise<string> {
-    return new Promise((resolve, reject) => {
+  static parseUpload(files: FileList): Promise<string[]> {
+    return new Promise(async (resolve, reject) => {
       // Ensure the upload contains at least one file
       if (files.length === 0) {
         reject(new Error("No files selected for upload."));
         return;
       }
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      const filePromises: Promise<string>[] = [];
+
+      for (const file of files) {
         // Verify the file type is .har
         if (!file?.name.endsWith(".har")) {
           reject(
@@ -23,9 +24,13 @@ export default class UploadParser {
           return;
         }
 
-        file
-          .text()
-          .then((text) => {
+        filePromises.push(file.text());
+      }
+
+      try {
+        const results = await Promise.all(filePromises);
+        results.forEach((text, index) => {
+          try {
             const uploadContent: Har = JSON.parse(text);
 
             uploadContent.log.entries.forEach((entry) => {
@@ -41,10 +46,13 @@ export default class UploadParser {
                 }
               }
             });
-          })
-          .catch((error) => {
-            reject(new Error(`Error parsing file ${i + 1}:`, error));
-          });
+          } catch (error) {
+            reject(new Error(`Error parsing file ${index + 1}:`, error));
+          }
+        });
+        resolve(results);
+      } catch (error) {
+        reject(error);
       }
     });
   }

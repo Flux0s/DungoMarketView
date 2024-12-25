@@ -10,9 +10,13 @@ export default function ButtonIcon() {
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
-    UploadParser.parseUpload(event.target.files).catch((error) => {
-      console.error("Error parsing upload:", error);
-    });
+    UploadParser.parseUpload(event.target.files)
+      .then((messages: string[]) => {
+        console.log(messages);
+      })
+      .catch((error) => {
+        console.error("Error parsing upload:", error);
+      });
   };
   return (
     <div>
